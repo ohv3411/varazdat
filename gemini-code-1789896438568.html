@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Супер Герой - Деление Столбиком</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            background: linear-gradient(-45deg, #74ebd5, #9face6, #84fab0, #8fd3f4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: #333;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Characters Layout */
+        .characters-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 15px;
+            position: relative;
+        }
+
+        .mascot-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .mascot {
+            line-height: 1;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            filter: drop-shadow(0px 8px 10px rgba(0,0,0,0.15));
+            z-index: 2;
+        }
+
+        .mascot.happy {
+            transform: scale(1.2) translateY(-10px);
+        }
+
+        .mascot.sad {
+            transform: scale(0.9) translateY(5px);
+            filter: grayscale(50%) drop-shadow(0px 4px 5px rgba(0,0,0,0.2));
+        }
+
+        .speech-bubble {
+            position: absolute;
+            bottom: 105%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px) scale(0.9);
+            background: white;
+            border: 3px solid #ff9900;
+            border-radius: 16px;
+            padding: 8px 14px;
+            font-weight: bold;
+            color: #333;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            pointer-events: none;
+            line-height: 1.2;
+            text-align: center;
+            width: max-content;
+            max-width: 160px;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            margin-left: -8px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: inherit;
+            border-bottom-color: transparent;
+            border-left-color: transparent;
+            border-right-color: transparent;
+        }
+
+        .speech-bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
+
+        /* Avatar */
+        .avatar-container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid #FFD700;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background-color: white;
+        }
+
+        .title-badge {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff3366;
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 800;
+            border: 2px solid white;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 3;
+        }
+
+        /* Inputs & Animations */
+        input[type="number"] {
+            -moz-appearance: textfield;
+            font-family: 'Baloo 2', cursive;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: #ff4d4d !important;
+            background-color: #ffe6e6 !important;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .correct-pulse {
+            animation: pulse-green 0.8s ease-out;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); border-color: #22c55e; }
+            70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); border-color: #22c55e; }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); border-color: transparent; }
+        }
+
+        /* Graphic Feedback Overlay */
+        .graphic-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 50;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .graphic-feedback.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .pop-in {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Math Board Grid Styling */
+        .math-cell {
+            width: 24px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @media (min-width: 640px) {
+            .math-cell { width: 36px; height: 44px; }
+        }
+        @media (min-width: 768px) {
+            .math-cell { width: 44px; height: 56px; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-2 sm:p-4 relative">
+
+    <div class="absolute inset-0 pointer-events-none overflow-hidden" id="particles"></div>
+
+    <div class="glass-card w-full max-w-4xl p-4 sm:p-8 flex flex-col items-center z-10 relative">
+        
+        <!-- Header -->
+        <div class="w-full flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+            
+            <div class="flex items-center flex-col md:flex-row gap-2 md:gap-4">
+                <div class="characters-wrapper">
+                    <div class="mascot-container w-16 sm:w-20">
+                        <div class="speech-bubble text-[11px] sm:text-sm" id="mascotBubble">Привет!</div>
+                        <div class="mascot text-5xl sm:text-6xl" id="mascot">⚽🏃‍♂️</div>
+                    </div>
+                    <div class="avatar-container w-20 h-20 sm:w-28 sm:h-28">
+                        <img src="IMG_4751.jpg" alt="Герой" class="avatar" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                        <div class="title-badge text-[10px] sm:text-xs" id="rankBadge">НОВИЧОК 🌟</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex flex-col gap-2 w-full md:w-2/5">
+                <div class="bg-indigo-900/80 p-2 sm:p-3 rounded-2xl border-2 border-indigo-400/50 flex justify-between items-center shadow-lg text-white">
+                    <span class="text-sm sm:text-lg font-bold text-indigo-200">Очки:</span>
+                    <span id="scoreDisplay" class="text-2xl sm:text-3xl font-extrabold transition-transform duration-300">0</span>
+                </div>
+                
+                <div class="w-full">
+                    <div class="flex justify-between text-[10px] sm:text-xs font-bold mb-1 text-indigo-900">
+                        <span id="levelText">Уровень 1</span>
+                        <span id="nextLevelText">До след. уровня: 100</span>
+                    </div>
+                    <div class="w-full bg-white/60 rounded-full h-2 sm:h-3 border border-indigo-200 shadow-inner">
+                        <div id="progressBar" class="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="initProblem()" class="absolute top-4 right-4 text-indigo-900/60 hover:text-indigo-900 text-xs sm:text-sm font-bold bg-white/30 px-3 py-1 rounded-full transition-colors"><i class="fa-solid fa-forward mr-1"></i> Пропустить</button>
+
+        <!-- Main Workspace (Long Division Board) -->
+        <div class="relative w-full flex flex-col items-center mt-2">
+            
+            <div id="graphicFeedback" class="graphic-feedback">
+                <span id="feedbackSymbol" class="text-[100px] sm:text-[150px] drop-shadow-xl font-black"></span>
+            </div>
+
+            <!-- The Math Board -->
+            <div class="bg-white/95 rounded-3xl p-6 sm:p-10 shadow-2xl border-b-8 border-indigo-300 w-full max-w-2xl flex flex-col items-center overflow-x-auto relative">
+                
+                <!-- Progress of current problem -->
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-50">
+                    <div id="problemProgress" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <div class="flex flex-row justify-center items-start text-2xl sm:text-4xl md:text-5xl font-mono font-bold text-gray-800 mt-2">
+                    <!-- Left Side (Dividend & Steps) -->
+                    <div id="leftSide" class="flex flex-col text-right">
+                        <!-- Dynamic rows injected here -->
+                    </div>
+                    
+                    <!-- Right Side (Divisor & Quotient) -->
+                    <div id="rightSide" class="flex flex-col border-l-4 border-gray-800 ml-1 pl-1 sm:ml-2 sm:pl-2 text-left">
+                        <!-- Dynamic divisor and quotient injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Tutor Interaction Area -->
+            <div class="mt-6 bg-indigo-50 border-4 border-indigo-100 rounded-3xl p-4 sm:p-8 w-full max-w-2xl flex flex-col items-center shadow-lg">
+                <h2 id="questionText" class="text-lg sm:text-2xl font-bold text-center text-indigo-900 mb-4 sm:mb-6 min-h-[4rem] flex flex-col items-center justify-center leading-tight">...</h2>
+                
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center justify-center w-full">
+                    <input type="number" id="stepInput" class="w-24 sm:w-32 h-14 sm:h-20 text-3xl sm:text-5xl text-center text-blue-700 bg-white border-4 border-blue-300 rounded-2xl focus:outline-none focus:border-indigo-500 shadow-inner" autocomplete="off" inputmode="numeric">
+                    
+                    <button id="stepBtn" class="bg-gradient-to-r from-orange-400 to-red-500 text-white font-extrabold text-base sm:text-xl py-3 sm:py-5 px-6 sm:px-10 rounded-2xl shadow-xl transition-transform hover:scale-105 active:scale-95 w-full sm:w-auto">
+                        ПРОВЕРИТЬ
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Badges -->
+        <div class="w-full mt-6">
+            <h3 class="text-center text-xs sm:text-sm font-bold text-indigo-900 uppercase tracking-widest mb-3">Твои Награды</h3>
+            <div id="badgesContainer" class="flex flex-wrap justify-center gap-2 sm:gap-3 min-h-[50px]"></div>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let level = 1;
+        let sequence = [];
+        let currentStep = 0;
+        let isProcessing = false;
+        
+        const ranks = [
+            { id: 1, name: "Новичок", threshold: 0, icon: "fa-star", color: "text-white", bg: "bg-gray-400" },
+            { id: 2, name: "Умник", threshold: 100, icon: "fa-medal", color: "text-blue-100", bg: "bg-blue-500" },
+            { id: 3, name: "Мастер", threshold: 300, icon: "fa-trophy", color: "text-yellow-100", bg: "bg-yellow-500" },
+            { id: 4, name: "Гений", threshold: 700, icon: "fa-brain", color: "text-purple-100", bg: "bg-purple-500" },
+            { id: 5, name: "Легенда", threshold: 1500, icon: "fa-crown", color: "text-yellow-100", bg: "bg-red-500" },
+            { id: 6, name: "ЧЕМПИОН", threshold: 3000, icon: "fa-gem", color: "text-cyan-100", bg: "bg-gradient-to-r from-cyan-500 to-blue-500" }
+        ];
+
+        let currentRankIndex = 0;
+        let earnedBadges = [];
+
+        // DOM elements
+        const elInput = document.getElementById('stepInput');
+        const elBtn = document.getElementById('stepBtn');
+        const elScore = document.getElementById('scoreDisplay');
+        const mascot = document.getElementById('mascot');
+        const mascotBubble = document.getElementById('mascotBubble');
+        const graphicFeedback = document.getElementById('graphicFeedback');
+        const feedbackSymbol = document.getElementById('feedbackSymbol');
+
+        // Logic Generators
+        function generateNewProblem(lvl) {
+            let divisor = Math.floor(Math.random() * 8) + 2; 
+            let minQ, maxQ;
+            if (lvl === 1) { minQ = 10; maxQ = 99; }
+            else if (lvl === 2) { minQ = 50; maxQ = 200; }
+            else if (lvl === 3) { minQ = 100; maxQ = 999; }
+            else if (lvl === 4) { minQ = 500; maxQ = 2000; }
+            else { minQ = 1000; maxQ = 9999; }
+            
+            let quotient = Math.floor(Math.random() * (maxQ - minQ + 1)) + minQ;
+            let dividend = divisor * quotient;
+            
+            return { dividend, divisor };
+        }
+
+        function createRowData(str, endPos, isMinus, N) {
+            let chars = Array(N).fill(' ');
+            let underline = Array(N).fill(false);
+            
+            let startPos = endPos - str.length + 1;
+            for(let i=0; i<str.length; i++) {
+                chars[startPos + i] = str[i];
+                if (isMinus) underline[startPos + i] = true;
+            }
+            if (isMinus) {
+                chars[startPos - 1] = '-';
+                underline[startPos - 1] = true;
+            }
+            return { chars, underline };
+        }
+
+        function generateGridModel(dividend, divisor) {
+            let divStr = dividend.toString();
+            let N = divStr.length + 1; 
+            
+            let seq = [];
+            let rows = [];
+
+            const addRow = (rowObj, textClass) => {
+                rows.push({ chars: [...rowObj.chars], underline: [...rowObj.underline], textClass });
+            };
+
+            let row0 = createRowData(divStr, N-1, false, N);
+            addRow(row0, 'text-gray-800');
+
+            let currentValStr = divStr[0];
+            let curIdx = 0;
+
+            if (parseInt(currentValStr) < divisor && divStr.length > 1) {
+                currentValStr += divStr[1];
+                curIdx = 1;
+            }
+
+            let qStr = "";
+
+            while (curIdx < divStr.length) {
+                let cVal = parseInt(currentValStr);
+                let qDigit = Math.floor(cVal / divisor);
+                let mVal = qDigit * divisor;
+                let rem = cVal - mVal;
+
+                // DIVIDE
+                seq.push({
+                    rows: JSON.parse(JSON.stringify(rows)),
+                    qStr: qStr,
+                    divisor: divisor,
+                    question: `Делим <b class="text-blue-600">${cVal}</b> на <b class="text-blue-600">${divisor}</b>.<br><span class="text-base sm:text-lg text-indigo-500 font-semibold">Какую цифру напишем в ответ?</span>`,
+                    expected: qDigit.toString(),
+                    btnText: "ПРОВЕРИТЬ",
+                    showInput: true
+                });
+
+                qStr += qDigit.toString();
+
+                // MULTIPLY
+                seq.push({
+                    rows: JSON.parse(JSON.stringify(rows)),
+                    qStr: qStr,
+                    divisor: divisor,
+                    question: `Умножаем:<br><span class="text-2xl sm:text-3xl text-orange-600">${qDigit} × ${divisor} = ?</span>`,
+                    expected: mVal.toString(),
+                    btnText: "ПРОВЕРИТЬ",
+                    showInput: true
+                });
+
+                let mRow = createRowData(mVal.toString(), curIdx + 1, true, N);
+                addRow(mRow, 'text-red-500');
+
+                // SUBTRACT
+                seq.push({
+                    rows: JSON.parse(JSON.stringify(rows)),
+                    qStr: qStr,
+                    divisor: divisor,
+                    question: `Вычитаем:<br><span class="text-2xl sm:text-3xl text-red-500">${cVal} - ${mVal} = ?</span><br><span class="text-xs sm:text-sm text-gray-500">(Ищем остаток)</span>`,
+                    expected: rem.toString(),
+                    btnText: "ПРОВЕРИТЬ",
+                    showInput: true
+                });
+
+                curIdx++;
+                if (curIdx < divStr.length) {
+                    let nextD = divStr[curIdx];
+                    let nextValStr = (rem === 0 ? "" : rem.toString()) + nextD;
+                    if (nextValStr === "") nextValStr = "0";
+                    
+                    let nRow = createRowData(nextValStr, curIdx + 1, false, N);
+                    addRow(nRow, 'text-blue-600 font-bold');
+
+                    currentValStr = nextValStr;
+
+                    seq.push({
+                        rows: JSON.parse(JSON.stringify(rows)),
+                        qStr: qStr,
+                        divisor: divisor,
+                        question: `Сносим цифру <b class="text-blue-600">${nextD}</b>.<br>Получили ${nextValStr}.`,
+                        expected: "",
+                        btnText: "ДАЛЬШЕ",
+                        showInput: false
+                    });
+                } else {
+                    let fRow = createRowData(rem.toString(), curIdx, false, N);
+                    addRow(fRow, 'text-green-600 font-black');
+
+                    seq.push({
+                        rows: JSON.parse(JSON.stringify(rows)),
+                        qStr: qStr,
+                        divisor: divisor,
+                        question: `Ура! Остаток <b class="text-green-600">${rem}</b>.<br>Пример решен!`,
+                        expected: "",
+                        btnText: "СЛЕДУЮЩИЙ ПРИМЕР",
+                        showInput: false,
+                        isDone: true
+                    });
+                }
+            }
+            return seq;
+        }
+
+        function initProblem() {
+            let prob = generateNewProblem(level);
+            sequence = generateGridModel(prob.dividend, prob.divisor);
+            currentStep = 0;
+            renderStep();
+        }
+
+        function renderStep() {
+            let step = sequence[currentStep];
+            
+            let leftSide = document.getElementById('leftSide');
+            leftSide.innerHTML = '';
+            
+            step.rows.forEach(row => {
+                let rowDiv = document.createElement('div');
+                rowDiv.className = 'flex';
+                row.chars.forEach((char, i) => {
+                    let cell = document.createElement('div');
+                    cell.className = 'math-cell';
+                    if (row.underline[i]) cell.classList.add('border-b-4', 'border-gray-800');
+                    if (row.textClass) cell.classList.add(...row.textClass.split(' '));
+                    cell.innerText = char === ' ' ? '' : char;
+                    rowDiv.appendChild(cell);
+                });
+                leftSide.appendChild(rowDiv);
+            });
+
+            let rightSide = document.getElementById('rightSide');
+            rightSide.innerHTML = '';
+            
+            let divCell = document.createElement('div');
+            divCell.className = 'h-8 sm:h-10 md:h-12 flex items-center text-blue-600 px-2';
+            divCell.innerText = step.divisor;
+            rightSide.appendChild(divCell);
+
+            let qCell = document.createElement('div');
+            qCell.className = 'h-8 sm:h-10 md:h-12 flex items-center text-purple-600 border-t-4 border-gray-800 px-2 min-w-[2rem]';
+            qCell.innerText = step.qStr;
+            rightSide.appendChild(qCell);
+
+            document.getElementById('questionText').innerHTML = step.question;
+            
+            if (step.showInput) {
+                elInput.style.display = 'block';
+                elInput.value = '';
+                elBtn.innerText = step.btnText;
+                setTimeout(() => elInput.focus(), 50);
+            } else {
+                elInput.style.display = 'none';
+                elBtn.innerText = step.btnText;
+            }
+
+            // Update Progress bar
+            let progressPercent = ((currentStep + 1) / sequence.length) * 100;
+            document.getElementById('problemProgress').style.width = progressPercent + '%';
+        }
+
+        function handleAction() {
+            if(isProcessing) return;
+            
+            let step = sequence[currentStep];
+            
+            if (!step.showInput) {
+                if (step.isDone) {
+                    score += 50; // Bonus for finishing
+                    updateLevelAndRank();
+                    initProblem();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+                return;
+            }
+
+            let inputVal = elInput.value;
+            if (inputVal === '') return;
+            
+            isProcessing = true;
+
+            if (inputVal === step.expected) {
+                score += 10;
+                animateScore(score);
+                showGraphicFeedback('✅', '#22c55e');
+                
+                mascot.className = 'mascot happy';
+                mascot.innerText = '🥅⚽🙌'; 
+                mascotBubble.innerHTML = 'Отлично!';
+                mascotBubble.style.borderColor = '#22c55e';
+                mascotBubble.style.color = '#22c55e';
+                mascotBubble.className = 'speech-bubble show';
+
+                elInput.classList.add('correct-pulse');
+
+                setTimeout(() => {
+                    mascot.className = 'mascot';
+                    mascot.innerText = '⚽🏃‍♂️'; 
+                    mascotBubble.className = 'speech-bubble';
+                    elInput.classList.remove('correct-pulse');
+                    
+                    updateLevelAndRank();
+                    currentStep++;
+                    renderStep();
+                    isProcessing = false;
+                }, 1200);
+
+            } else {
+                showGraphicFeedback('−', '#ef4444'); // Real minus sign
+                
+                mascot.className = 'mascot sad';
+                mascot.innerText = '😟⚽💪';
+                mascotBubble.innerHTML = 'Ты сможешь!<br>Подумай еще.';
+                mascotBubble.style.borderColor = '#ef4444';
+                mascotBubble.style.color = '#ef4444';
+                mascotBubble.className = 'speech-bubble show';
+
+                elInput.classList.remove('shake');
+                void elInput.offsetWidth;
+                elInput.classList.add('shake');
+                elInput.value = '';
+                
+                setTimeout(() => {
+                    mascot.className = 'mascot';
+                    mascot.innerText = '⚽🏃‍♂️'; 
+                    mascotBubble.className = 'speech-bubble';
+                    isProcessing = false;
+                    elInput.focus();
+                }, 1500);
+            }
+        }
+
+        function showGraphicFeedback(symbol, color) {
+            feedbackSymbol.innerText = symbol;
+            feedbackSymbol.className = `font-black text-[120px] sm:text-[180px] drop-shadow-xl text-[${color}]`;
+            
+            graphicFeedback.classList.remove('opacity-0', 'scale-0');
+            graphicFeedback.classList.add('opacity-100', 'scale-100');
+            
+            setTimeout(() => {
+                graphicFeedback.classList.remove('opacity-100', 'scale-100');
+                graphicFeedback.classList.add('opacity-0', 'scale-0');
+            }, 800);
+        }
+
+        function animateScore(newScore) {
+            elScore.innerText = newScore;
+            elScore.style.transform = 'scale(1.5)';
+            elScore.style.color = '#FFD700';
+            setTimeout(() => {
+                elScore.style.transform = 'scale(1)';
+                elScore.style.color = 'white';
+            }, 300);
+        }
+
+        function updateLevelAndRank() {
+            let newRankIndex = currentRankIndex;
+            for (let i = ranks.length - 1; i >= 0; i--) {
+                if (score >= ranks[i].threshold) {
+                    newRankIndex = i;
+                    break;
+                }
+            }
+
+            if (newRankIndex > currentRankIndex || score === 0) {
+                currentRankIndex = newRankIndex;
+                const newRank = ranks[currentRankIndex];
+                
+                document.getElementById('rankBadge').innerHTML = `<i class="fa-solid ${newRank.icon} mr-1"></i>${newRank.name}`;
+                
+                if(score > 0) {
+                    if (typeof confetti === 'function') {
+                        var duration = 3000;
+                        var end = Date.now() + duration;
+                        (function frame() {
+                            confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff0000', '#ffff00'], zIndex: 1000 });
+                            confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ff0000', '#ffff00'], zIndex: 1000 });
+                            if (Date.now() < end) requestAnimationFrame(frame);
+                        }());
+                    }
+                    level++; 
+                }
+                
+                document.getElementById('levelText').innerText = `Уровень ${level}`;
+                awardBadge(newRank);
+            }
+
+            let currentLevelObj = ranks[currentRankIndex];
+            let nextLevelObj = ranks[currentRankIndex + 1];
+            let elProgressBar = document.getElementById('progressBar');
+            let elNextLevelText = document.getElementById('nextLevelText');
+            
+            if (nextLevelObj) {
+                let range = nextLevelObj.threshold - currentLevelObj.threshold;
+                let progressIntoLevel = score - currentLevelObj.threshold;
+                let percent = (progressIntoLevel / range) * 100;
+                
+                elProgressBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+                elNextLevelText.innerText = `До "${nextLevelObj.name}": ${nextLevelObj.threshold - score}`;
+            } else {
+                elProgressBar.style.width = `100%`;
+                elNextLevelText.innerText = `Максимальный Ранг!`;
+            }
+        }
+
+        function awardBadge(rankObj) {
+            if (!earnedBadges.includes(rankObj.id)) {
+                earnedBadges.push(rankObj.id);
+                const badge = document.createElement('div');
+                badge.className = `pop-in flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-xl shadow-md border border-white/30 ${rankObj.bg} ${rankObj.color} font-bold text-[10px] sm:text-xs`;
+                badge.innerHTML = `<i class="fa-solid ${rankObj.icon}"></i> <span>${rankObj.name}</span>`;
+                document.getElementById('badgesContainer').appendChild(badge);
+            }
+        }
+
+        elBtn.addEventListener('click', handleAction);
+        elInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleAction();
+        });
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            if(!container) return;
+            for(let i=0; i<15; i++) {
+                let div = document.createElement('div');
+                div.className = 'absolute rounded-full bg-white/20 pointer-events-none';
+                let size = Math.random() * 15 + 5;
+                div.style.width = size + 'px';
+                div.style.height = size + 'px';
+                div.style.left = Math.random() * 100 + 'vw';
+                div.style.top = Math.random() * 100 + 'vh';
+                div.style.animation = `float ${Math.random() * 4 + 3}s ease-in-out infinite`;
+                div.style.animationDelay = `${Math.random() * 2}s`;
+                container.appendChild(div);
+            }
+        }
+
+        window.onload = () => {
+            createParticles();
+            score = 0;
+            updateLevelAndRank();
+            initProblem();
+        };
+    </script>
+</body>
+</html>
